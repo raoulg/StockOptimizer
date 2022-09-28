@@ -1,0 +1,4 @@
+name = "StockOptimizer"
+uuid = "d7cbd9b4-a955-4b05-982f-38d38a06d84f"
+authors = ["Raoul Grouls <raoul.grouls@businessdecision.nl>"]
+version = "0.1.0"
