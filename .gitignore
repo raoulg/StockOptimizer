@@ -1,0 +1,4 @@
+*.parq
+*.jld2
+*.vscode
+*.DS_Store
