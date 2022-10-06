@@ -2,3 +2,17 @@ name = "StockOptimizer"
 uuid = "d7cbd9b4-a955-4b05-982f-38d38a06d84f"
 authors = ["Raoul Grouls <raoul.grouls@businessdecision.nl>"]
 version = "0.1.0"
+
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+Impute = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+Parquet = "626c502c-15b0-58ad-a749-f091afb673ae"
+Pipe = "b98c9c47-44ae-5843-9183-064241ee97a0"
+ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
