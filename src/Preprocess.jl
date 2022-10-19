@@ -26,7 +26,7 @@ function fillnawithzero(df::DataFrame, col::Vector{Symbol})
   transform(df, col .=> ByRow(x -> ismissing(x) ? 0.0 : x) .=> col)
 end
 
-find_float64(df) = findall(col -> eltype(col) <: Union{Missing, Float64}, eachcol(df))
+find_float64(df) = findall(col -> eltype(col) <: Union{Missing,Float64}, eachcol(df))
 convertFloat32(x) = convert(Vector{Float32}, x)
 
 function preprocess(df::AbstractDataFrame, config::PreprocessConfig)::AbstractDataFrame
@@ -47,7 +47,11 @@ function preprocess(df::AbstractDataFrame, config::PreprocessConfig)::AbstractDa
 end
 
 
-function batch_and_save(config::Config, ppconfig::PreprocessConfig, dataconfig::DataConfig)
+function batch_and_save(
+  config::Config,
+  ppconfig::PreprocessConfig,
+  dataconfig::DataConfig,
+)
   @info "Loading data"
   df = Load.load_train(config)
   df = Load.join_static(df, config)
@@ -75,7 +79,7 @@ function batch_and_save(config::Config, ppconfig::PreprocessConfig, dataconfig::
 
     cols = find_float64(out)
     @info "Converting Float64 to Float32 for $(length(cols)) columns."
-    transform!(out, cols .=> convertFloat32, renamecols=false)
+    transform!(out, cols .=> convertFloat32, renamecols = false)
 
     for key in keys(vocabs)
       transform!(out, key => ByRow(x -> vocabs[key][x]) => key)

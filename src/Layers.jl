@@ -21,7 +21,7 @@ Split(paths...) = Split(paths)
 (m::Split)(x::AbstractArray) = map(f -> f(x), m.paths)
 
 # type for 3D data
-const Abstract3DArray{T} = AbstractArray{T, 3}
+const Abstract3DArray{T} = AbstractArray{T,3}
 
 # fast fill of a bias, with size of the first dimension of the weights
 create_bias(weights::AbstractArray) = fill!(similar(weights, size(weights, 1)), 0)

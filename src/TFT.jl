@@ -1,6 +1,17 @@
 module TFT
 
-using Flux: Parallel, sigmoid, Chain, Dense, elu, @functor, Embedding, softmax, SkipConnection, normalise, identity
+using Flux:
+  Parallel,
+  sigmoid,
+  Chain,
+  Dense,
+  elu,
+  @functor,
+  Embedding,
+  softmax,
+  SkipConnection,
+  normalise,
+  identity
 import Flux
 using ..Vocabulary: Vocab
 using ..Layers
@@ -10,16 +21,17 @@ using ..Settings: DataConfig
 
 expand1(x) = reshape(x, (1, size(x)...))
 expand2(x) = reshape(x, (size(x, 1), 1, size(x)[2:end]...))
-stack_embeddings(x) = vcat(map(expand1, x)...);
+stack_embeddings(x) = vcat(map(expand1, x)...)
 flat_embeddings(x) = vcat(x...)
 
-create_vector(x) = softmax(expand2(x), dims=1); # selection vector
+create_vector(x) = softmax(expand2(x), dims = 1) # selection vector
 variable_select(v, ξ) = dropdims(sum(v .* ξ, dims = 1); dims = 1)
 
 # projection helpers
 split_dyn_cat(x::Abstract3DArray) = [x[i, :, :] for i in axes(x)[1]]
 split_real(x::Abstract3DArray) = [x[i:i, :, :] for i in axes(x)[1]]
-preprocesscat(batch::Vector{Observation}, cols::Vector{Symbol}) = split_dyn_cat(extract_reshape_dynamic(batch, cols))
+preprocesscat(batch::Vector{Observation}, cols::Vector{Symbol}) =
+  split_dyn_cat(extract_reshape_dynamic(batch, cols))
 densepaths(in::Int, out::Int) = [Dense(1, out) for _ = 1:in]
 
 function extract_static(batch::Vector{Observation}, cols::Vector{Symbol})
@@ -27,7 +39,8 @@ function extract_static(batch::Vector{Observation}, cols::Vector{Symbol})
 end
 
 split_stat_cat(x::Matrix) = [x[i, :] for i in axes(x)[1]]
-preprocess_stat(batch::Vector{Observation}, cols::Vector{Symbol}) = split_stat_cat(extract_static(batch, cols))
+preprocess_stat(batch::Vector{Observation}, cols::Vector{Symbol}) =
+  split_stat_cat(extract_static(batch, cols))
 
 """
 Extract the dynamic part, defined by a list of column names, from a Vector of Observations.
@@ -45,14 +58,20 @@ true
 ```
 
 """
-function extract_reshape_dynamic(batch::Vector{Observation}, cols::Vector{Symbol}, shape::Tuple)::Abstract3DArray
+function extract_reshape_dynamic(
+  batch::Vector{Observation},
+  cols::Vector{Symbol},
+  shape::Tuple,
+)::Abstract3DArray
   m = [transpose(Matrix(v.dynamic[:, cols])) for v in batch]
   reshape(reduce(hcat, m), shape)
 end
 
-getshape(batch::Vector{Observation}, cols) = (length(cols), size(first(batch).dynamic, 1), length(batch))
+getshape(batch::Vector{Observation}, cols) =
+  (length(cols), size(first(batch).dynamic, 1), length(batch))
 
-extract_reshape_dynamic(batch::Vector{Observation}, cols) = extract_reshape_dynamic(batch, cols, getshape(batch, cols))
+extract_reshape_dynamic(batch::Vector{Observation}, cols) =
+  extract_reshape_dynamic(batch, cols, getshape(batch, cols))
 
 function GLU(in, out)
   Chain(Flux.Parallel(Layers.Hadamard, Dense(in => out, sigmoid), Dense(in => out)))
@@ -62,8 +81,8 @@ end
 ## GRN
 
 struct GRN
-  model
-  project
+  model::Any
+  project::Any
 end
 
 @functor GRN
@@ -80,14 +99,15 @@ _grnContext(in::Int, hidden::Int, out::Int) = Chain(
 
 _grnNoContext(in, hidden, out) = Chain(Dense(in => hidden), elu, TFT.GLU(hidden, out))
 
-function GRN(in::Int, hidden::Int, out::Int ;context::Bool) 
-  context ? model = TFT._grnContext(in, hidden, out) : model = TFT._grnNoContext(in, hidden, out)
+function GRN(in::Int, hidden::Int, out::Int; context::Bool)
+  context ? model = TFT._grnContext(in, hidden, out) :
+  model = TFT._grnNoContext(in, hidden, out)
   (in == out) ? project = identity : project = Dense(in, out)
   GRN(model, project)
   # context ? skip = (mx, (x, _)) -> project(x) .+ mx : skip = (mx, x) -> project(x) .+ mx
 end
 
-(g::GRN)(x::Tuple{AbstractArray, Matrix}) = normalise(g.project(x[1]) .+ g.model(x))
+(g::GRN)(x::Tuple{AbstractArray,Matrix}) = normalise(g.project(x[1]) .+ g.model(x))
 (g::GRN)(x::AbstractArray) = normalise(g.project(x) .+ g.model(x))
 
 # GRN(in::Int, hidden::Int, out::Int; context::Bool) =
@@ -96,7 +116,7 @@ end
 # (g::GRN)(xs) = g.path(xs)
 
 ## MultiEmbedding
-struct MultiEmbedding{F, N}
+struct MultiEmbedding{F,N}
   cat_cols::Vector{Symbol}
   static::Bool
   dims::Int
@@ -106,11 +126,20 @@ end
 
 @functor MultiEmbedding
 
-function MultiEmbedding(cat_cols::Vector{Symbol}, vocabs::Dict{Symbol, Vocab}, dims::Int; static::Bool)
+function MultiEmbedding(
+  cat_cols::Vector{Symbol},
+  vocabs::Dict{Symbol,Vocab},
+  dims::Int;
+  static::Bool,
+)
   static ? preprocess = preprocess_stat : preprocess = preprocesscat
-  MultiEmbedding(cat_cols, static, dims, preprocess, 
-    [Embedding(vocabs[key].len, dims) for key in cat_cols]
-    )
+  MultiEmbedding(
+    cat_cols,
+    static,
+    dims,
+    preprocess,
+    [Embedding(vocabs[key].len, dims) for key in cat_cols],
+  )
 end
 
 (m::MultiEmbedding)(batch::Vector{Observation}) =
@@ -136,46 +165,55 @@ end
 
 # dynamic Variable selection
 struct VariableSelectionNetwork
-  project
+  project::Any
   reshape::Layers.Split
-  context_network
+  context_network::Any
   create_vector::Function
   reduction::Function
 end
 
 @functor VariableSelectionNetwork
 
-function dynamic_vsn(dataconfig::DataConfig, vocabs::Dict{Symbol, Vocab}, hidden::Int)
-    VariableSelectionNetwork(
-      Parallel(
-        vcat,
-        TFT.MultiEmbedding(dataconfig.dyn_cat, vocabs, hidden, static=false),
-        TFT.ProjectRealTime(dataconfig.dyn_real, hidden)
-      ),
-      Layers.Split(TFT.stack_embeddings, TFT.flat_embeddings),
-      TFT.GRN(
-        (length(dataconfig.dyn_cat) + length(dataconfig.dyn_real)) * hidden,
-        hidden, 
-        (length(dataconfig.dyn_cat) + length(dataconfig.dyn_real)),
-        context=true), 
-      TFT.create_vector,
-      TFT.variable_select)
+function dynamic_vsn(dataconfig::DataConfig, vocabs::Dict{Symbol,Vocab}, hidden::Int)
+  VariableSelectionNetwork(
+    Parallel(
+      vcat,
+      TFT.MultiEmbedding(dataconfig.dyn_cat, vocabs, hidden, static = false),
+      TFT.ProjectRealTime(dataconfig.dyn_real, hidden),
+    ),
+    Layers.Split(TFT.stack_embeddings, TFT.flat_embeddings),
+    TFT.GRN(
+      (length(dataconfig.dyn_cat) + length(dataconfig.dyn_real)) * hidden,
+      hidden,
+      (length(dataconfig.dyn_cat) + length(dataconfig.dyn_real)),
+      context = true,
+    ),
+    TFT.create_vector,
+    TFT.variable_select,
+  )
 end
 
 
-function static_vsn(dataconfig::DataConfig, vocabs::Dict{Symbol, Vocab}, hidden::Int)
-    cols = vcat(dataconfig.stat_cat)
-    vars = length(cols)
-    VariableSelectionNetwork(
-      TFT.MultiEmbedding(cols, vocabs, hidden, static=true),
-      Layers.Split(TFT.stack_embeddings, TFT.flat_embeddings),
-      TFT.GRN(vars * hidden, hidden, vars, context=false), 
-      TFT.create_vector,
-      TFT.variable_select)
+function static_vsn(dataconfig::DataConfig, vocabs::Dict{Symbol,Vocab}, hidden::Int)
+  cols = vcat(dataconfig.stat_cat)
+  vars = length(cols)
+  VariableSelectionNetwork(
+    TFT.MultiEmbedding(cols, vocabs, hidden, static = true),
+    Layers.Split(TFT.stack_embeddings, TFT.flat_embeddings),
+    TFT.GRN(vars * hidden, hidden, vars, context = false),
+    TFT.create_vector,
+    TFT.variable_select,
+  )
 end
 
-function VariableSelectionNetwork(dataconfig::DataConfig, vocabs::Dict{Symbol, Vocab}, hidden::Int; static::Bool)
-  static ? static_vsn(dataconfig, vocabs, hidden) : dynamic_vsn(dataconfig, vocabs, hidden)
+function VariableSelectionNetwork(
+  dataconfig::DataConfig,
+  vocabs::Dict{Symbol,Vocab},
+  hidden::Int;
+  static::Bool,
+)
+  static ? static_vsn(dataconfig, vocabs, hidden) :
+  dynamic_vsn(dataconfig, vocabs, hidden)
 end
 
 function (vsn::VariableSelectionNetwork)(batch::Vector{Observation}, c::Matrix)
@@ -191,32 +229,34 @@ function (vsn::VariableSelectionNetwork)(batch::Vector{Observation})
 end
 
 function StaticCovariates(dims)
-  paths = [TFT.GRN(dims, dims, dims, context=false) for _ in 1:4]
-  Chain(
-      Layers.Split(paths)
-  )
+  paths = [TFT.GRN(dims, dims, dims, context = false) for _ = 1:4]
+  Chain(Layers.Split(paths))
 end
 
-mutable struct LocalityEnhancement lstm::Flux.Recur
+mutable struct LocalityEnhancement
+  lstm::Flux.Recur
   glu::Flux.Chain
 end
 
 @functor LocalityEnhancement
 
-LocalityEnhancement(dims) = LocalityEnhancement(
-  Flux.LSTM(dims, dims),
-  TFT.GLU(dims, dims)
-)
+LocalityEnhancement(dims) =
+  LocalityEnhancement(Flux.LSTM(dims, dims), TFT.GLU(dims, dims))
 
-timecast(ξₜ)  = [ξₜ[:, i, :] for i in axes(ξₜ)[2]]
+timecast(ξₜ) = [ξₜ[:, i, :] for i in axes(ξₜ)[2]]
 uncast(x) = reshape(vcat(x...), (size(x[1], 1), length(x), size(x[1], 2)))
 # 1. calling LocalityEnhancement will call ϕ(m, ξ, c)
 # 2. calling ϕ(m, ξ, c) will initialize the lstm.state with c
 # 3. and continu to call ϕ(m, ξ)
 # 4. calling ϕ(m, ξ) will run the lstm on the timeseries ξ
 (m::LocalityEnhancement)(x::Tuple) = m(x[1], x[2])
-(m::LocalityEnhancement)(ξₜ::AbstractArray, state::Tuple{Matrix, Matrix}) = m.glu(ϕ(m, ξₜ,state))
-function ϕ(m::LocalityEnhancement, ξₜ::AbstractArray{T, 3}, state::Tuple{Matrix, Matrix}) where {T}
+(m::LocalityEnhancement)(ξₜ::AbstractArray, state::Tuple{Matrix,Matrix}) =
+  m.glu(ϕ(m, ξₜ, state))
+function ϕ(
+  m::LocalityEnhancement,
+  ξₜ::AbstractArray{T,3},
+  state::Tuple{Matrix,Matrix},
+) where {T}
   m.lstm.state = state
   ϕ(m, ξₜ)
 end
@@ -225,9 +265,9 @@ end
 
 function Seq2seq(dims)
   model = TFT.LocalityEnhancement(dims)
-  SkipConnection(model, (mx, (x,_)) -> normalise(mx + x))
+  SkipConnection(model, (mx, (x, _)) -> normalise(mx + x))
 end
 
-staticEnhancement(dims) = TFT.GRN(dims, dims, dims, context=true)
+staticEnhancement(dims) = TFT.GRN(dims, dims, dims, context = true)
 
 end

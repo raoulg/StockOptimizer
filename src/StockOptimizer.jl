@@ -20,13 +20,13 @@ using .Preprocess
 
 include("Data.jl")
 using .Data
-using .Data: Observation 
+using .Data: Observation
 
 include("Layers.jl")
 using .Layers
-using .Layers: Abstract3DArray 
+using .Layers: Abstract3DArray
 
 include("TFT.jl")
-using .TFT: MultiEmbedding 
+using .TFT: MultiEmbedding
 
 end # module StockOptimizer
