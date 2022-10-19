@@ -4,7 +4,7 @@ include("Paths.jl")
 using .Pathlib
 
 include("Settings.jl")
-using .Settings: Config, PreprocessConfig
+using .Settings: Config, PreprocessConfig, DataConfig
 
 
 include("Load.jl")
@@ -20,11 +20,13 @@ using .Preprocess
 
 include("Data.jl")
 using .Data
+using .Data: Observation 
 
 include("Layers.jl")
 using .Layers
+using .Layers: Abstract3DArray 
 
 include("TFT.jl")
-using .TFT: MultiEmbedding, MultiProject
+using .TFT: MultiEmbedding 
 
 end # module StockOptimizer
